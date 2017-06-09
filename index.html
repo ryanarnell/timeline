@@ -1,0 +1,365 @@
+<html lang="en-US">
+<head>
+    <title>Timeline | PowerHA</title>
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/jquery.scrollTo.min.js"></script>
+    <script type="text/javascript" src="lib/timeline.js"></script>
+    <script type="text/javascript" src="lib/timeline-locales.js"></script>
+    <link rel="stylesheet" type="text/css" href="lib/timeline.css">
+
+    <script type="text/javascript">
+        var timeline;
+        var data;
+        var lastEventId = 1;
+        var prevSelectedDotDiv = null;
+        var eventToItemMapping = {};
+        // Called when the Visualization API is loaded.
+        function drawVisualization() {
+            // Create a JSON data table
+            data = [
+                {
+                    'start': new Date(2017,7,23),
+                    'content': '',
+                    'className': 'yellow',
+                    'event_id': 1
+                },
+
+                {
+                    'start': new Date(2017,7,24),
+                    'content': '',
+                    'className': 'green',
+                    'event_id': 2
+                },
+
+                {
+                    'start': new Date(2017,7,25),
+                    'content': '',
+                    'event_id': 3
+                },
+
+                {
+                    'start': new Date(2017,7,26),
+                    'content': '',
+                    'event_id': 4
+                   
+                },
+
+                {
+                    'start': new Date(2017,7,29),
+                    'content': '',
+                    'className': 'green',
+                    'event_id': 5
+                },
+
+                {
+                    'start': new Date(2017,7,30),
+                    'content': '',
+                    'className': 'yellow',
+                    'event_id': 6
+                },
+
+                {
+                    'start': new Date(2017,8,4),
+                    'content': '',
+                    'className': 'green',
+                    'event_id': 7
+                },
+
+                {
+                    'start': new Date(2017,8,5),
+                    'content': '',
+                    'className': 'green',
+                    'event_id': 8
+                },
+
+                {
+                    'start': new Date(2017,8,6),
+                    'content': '',
+                    'className': 'green-m',
+                    'event_id': 9
+                },
+
+                {
+                    'start': new Date(2017,8,9),
+                    'content': '',
+                    'className': 'green',
+                    'event_id': 10
+                }
+            ];
+
+            // specify options
+            var options = {
+                'width':  '100%',
+                'height': '125px',
+                'start': new Date(2012, 0, 1),
+                'end': new Date(2012, 0, 31),
+                'cluster': true,
+                'locale': 'en',
+                'clusterMaxItems': 1,
+                'zoomMin': 1000*60*60,
+                'showNavigation': true,
+                'zoomable': true
+            };
+
+            // Instantiate our timeline object.
+            timeline = new links.Timeline(document.getElementById('mytimeline'), options);            
+            // Draw our timeline with the created data and options
+            timeline.draw(data);
+
+            bindEventHoverEvent();
+
+            $(window).resize(function() {
+                timeline.redraw();
+            });
+        }
+        function bindEventHoverEvent() {
+            $('.event').on("mouseenter", function(event){
+               $('.timeline-event-dot').removeClass("hovered");
+               var id = $(this).attr('id').replace(/[^\d]+/img, '');
+               eventToItemMapping[id].forEach(function(el) {
+                 $(el).addClass('hovered');
+               });
+            });
+
+            $('.event').on("mouseleave", function(event){
+               var id = $(this).attr('id').replace(/[^\d]+/img, '');
+               eventToItemMapping[id].forEach(function(el) {
+                 $(el).removeClass('hovered');
+               });
+            });            
+        }
+
+        function mouseoverItemEventCallback(eventId) {
+           $('.event').removeClass("highlighted");
+           $('#event_id_'+eventId).addClass("highlighted");
+        }
+
+        function clickItemEventCallback(eventId, dotDiv){
+             $('.timeline-event-dot').removeClass("selected");
+             if($(prevSelectedDotDiv)){
+                $(prevSelectedDotDiv).removeClass("selected");
+             }
+             $(dotDiv).addClass("selected");
+             prevSelectedDotDiv = dotDiv;
+             $('.events').scrollTo('#event_id_'+ eventId, { duration : 'slow' });
+        }
+
+        function itemToEventMapCallback(eventId, dotDiv, eventIds) {
+            eventIds.push(eventId);
+            eventIds.forEach(function(evtId){
+
+            if(eventToItemMapping.hasOwnProperty(evtId)) {
+                eventToItemMapping[evtId].push(dotDiv);
+            } else {
+                eventToItemMapping[evtId] = [dotDiv];
+            }
+
+            });
+        }
+
+        function itemArialLabelCallback(divDot, className, eventDate, content) {
+            //var weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            //monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+            var eventType = (className == 'green') ? "Ok" :
+                             (
+                                (className == 'green-m') ? "Maintenance" :
+                                   (
+                                    (className == 'yellow') ? "Warning" : "Error"
+                                )
+                            );
+            //var formattedDate = monthNames[eventDate.getMonth()] + " " + eventDate.getDate() + " " + eventDate.getFullYear();
+            var dd = eventDate.getDate();
+            var mm = eventDate.getMonth()+1; 
+            var yyyy = eventDate.getFullYear();
+            if(dd < 10) {
+                dd='0' + dd
+            } 
+            if(mm < 10) {
+                mm='0'+mm
+            } 
+            var formattedDate = dd+'/'+mm+'/'+yyyy;
+            divDot.setAttribute("aria-label", "Event type " + eventType + " on " +  formattedDate);
+        }
+
+
+        /**
+         * Zoom
+         * @param zoomVal
+         */
+        function zoom(zoomVal) {
+            timeline.zoom(zoomVal);
+            timeline.trigger("rangechange");
+            timeline.trigger("rangechanged");
+        }
+
+        /**
+         * Adjust the visible time range such that all events are visible.
+         */
+        function adjustVisibleTimeRangeToAccommodateAllEvents() {
+            timeline.setVisibleChartRangeAuto();
+        }
+
+        /**
+         * Move
+         * @param moveVal
+         */
+        function move(moveVal) {
+            timeline.move(moveVal);
+            timeline.trigger("rangechange");
+            timeline.trigger("rangechanged");
+        }
+
+        /**
+         * Move the visible range such that the current time is located in the center of the timeline.
+         */
+        function moveToCurrentTime() {
+            timeline.setVisibleChartRangeNow();
+        }
+
+    </script>
+</head>
+
+<body onload="drawVisualization();">
+    <input type="button" value="Now" class="timeline-button btn-now" title="Move to current time" onclick="moveToCurrentTime();">
+    <input type="button" value="Default" class="timeline-button btn-now" title="Adjust visible range to accommodate all events" onclick="adjustVisibleTimeRangeToAccommodateAllEvents();">
+
+    <div class="timeline-container">
+
+        <div id="mytimeline"></div>
+
+        <div class="timeline-controls-container">
+
+            <div class="timeline-controls">
+                <input type="button" value="" class="timeline-button btn-zoom-in" title="Zoom in" >
+                <input type="button" value="" class="timeline-button btn-zoom-out" title="Zoom in">
+                
+                <input type="button" value="" class="timeline-button btn-move-left" title="Move left">
+                <input type="button" value="" class="timeline-button btn-move-right"  title="Move right">
+            </div>
+
+        </div>
+    </div>
+    
+    <div >
+        <div class="events">
+            <div id="event_id_1" class="event">
+                <h2><a href="#">Event 1 Warning</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_2" class="event">
+                <h2><a href="#">Event 2 OK</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_3" class="event">
+                <h2><a href="#">Event 3 Error</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_4" class="event">
+                <h2><a href="#">Event 4 Error</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_5" class="event">
+                <h2><a href="#">Event 5 OK</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_6" class="event">
+                <h2><a href="#">Event 6 Warning</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_7" class="event">
+                <h2><a href="#">Event 7 OK</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+            <div id="event_id_8" class="event">
+                <h2><a href="#">Event 8 Ok</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+             <div id="event_id_9" class="event">
+                <h2><a href="#">Event 9 Maintainance</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+             <div id="event_id_10" class="event">
+                <h2><a href="#">Event 10 OK</a></h2>
+                <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Phasellus hendrerit. Pellentesque aliquet nibh nec urna. In nisi neque, aliquet vel, dapibus id, mattis vel, nisi. Sed pretium, ligula sollicitudin laoreet viverra, tortor libero sodales leo, eget blandit nunc tortor eu nibh. Nullam mollis. Ut justo. Suspendisse potenti.</p> 
+            </div>
+    </div>
+
+    <script>
+        var zoomInValue = 0.4;
+        var moveValue = 0.2;
+        var delay = 200;
+        var zoomInMouseDownTimer = null;
+        var zoomOutMouseDownTimer = null;
+        var moveLeftMouseDownTimer = null;
+        var moveRightMouseDownTimer = null;
+
+        $(".btn-zoom-in").click(function(e){
+          zoom(zoomInValue);
+        });
+
+        $(".btn-zoom-in").mousedown(function(e){
+            zoomInMouseDownTimer = setInterval(function () {
+                zoom(zoomInValue);
+            }, delay);
+        
+            return false;
+        });
+
+        $(".btn-zoom-in").mouseup(function(e){
+            clearInterval(zoomInMouseDownTimer);
+            return false;
+        });
+
+        $(".btn-zoom-out").click(function(e){
+          zoom(-1*zoomInValue);
+        });
+        $(".btn-zoom-out").mousedown(function(e){
+            zoomOutMouseDownTimer = setInterval(function () {
+                zoom(-1*zoomInValue);
+            }, delay);
+        
+            return false;
+        });
+
+        $(".btn-zoom-out").mouseup(function(e){
+            clearInterval(zoomOutMouseDownTimer);
+            return false;
+        });
+
+
+        $(".btn-move-left").click(function(e){
+          move(-1*moveValue);
+        });
+
+        $(".btn-move-left").mousedown(function(e){
+            moveLeftMouseDownTimer = setInterval(function () {
+                move(-1*moveValue);
+            }, delay);
+        
+            return false;
+        });
+
+        $(".btn-move-left").mouseup(function(e){
+            clearInterval(moveLeftMouseDownTimer);
+            return false;
+        });
+
+        $(".btn-move-right").click(function(e){
+          move(moveValue);
+        });
+        $(".btn-move-right").mousedown(function(e){
+            moveRightMouseDownTimer = setInterval(function () {
+                move(moveValue);
+            }, delay);
+        
+            return false;
+        });
+
+        $(".btn-move-right").mouseup(function(e){
+            clearInterval(moveRightMouseDownTimer);
+            return false;
+        });
+    </script>
+</body>
+</html>
